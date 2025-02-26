@@ -18,6 +18,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: Create Unsanctioned GEO Location List
+        run: |
+          echo "🚧 Creating unsanctioned.txt with GEO locations on the U.S. watchlist..."
+          cat > unsanctioned.txt << EOL
+Iran
+North Korea
+Cuba
+Syria
+Russia
+Belarus
+China
+Myanmar
+Venezuela
+Iraq
+Lebanon
+Libya
+Sudan
+Zimbabwe
+Afghanistan
+Yemen
+Somalia
+Eritrea
+Pakistan
+Kazakhstan
+EOL
+          echo "✅ Unsanctioned GEO location list created."
+
       - name: Run SCANOSS Provenance Lookup
         run: |
           echo "🚀 Running SCANOSS Provenance API Request..."
@@ -33,34 +60,51 @@ jobs:
           }' > provenance_results.json
           echo "✅ SCANOSS API request completed. Results saved to provenance_results.json"
 
-      - name: Generate Provenance Summary Using jq and awk
+      - name: Generate Provenance Summary with Unsanctioned Check
         run: |
           echo "📊 Extracting and Summarizing Provenance Data..."
           
-          # Extract declared locations and count frequencies using jq and awk
+          # Extract declared locations and count frequencies
           jq -r '.purls[0].declaredLocations[].location' provenance_results.json | sort | uniq -c | sort -nr > provenance_summary.txt
-          
-          # Generate a Markdown summary for GitHub Actions Job Summary
+
+          # Generate a pretty Markdown summary
           echo "# 📄 Provenance Summary for pkg:github/heimdal/heimdal" > provenance_summary.md
           echo "" >> provenance_summary.md
-          echo "## 🌍 Geographic Distribution of Contributors:" >> provenance_summary.md
-          echo "" >> provenance_summary.md
-          echo "| **Location** | **Count** |" >> provenance_summary.md
-          echo "|--------------|------------|" >> provenance_summary.md
+          echo "## 🌍 **Geographic Distribution of Contributors:**" >> provenance_summary.md
+          echo "---" >> provenance_summary.md
+          
+          echo "| 🌐 **Location** | 🔢 **Count** | 🛡️ **Status** |" >> provenance_summary.md
+          echo "|----------------|--------------|---------------|" >> provenance_summary.md
           
           while read -r line; do
               count=$(echo "$line" | awk '{print $1}')
               location=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
-              echo "| $location | $count |" >> provenance_summary.md
+              
+              # Check if the location is in the unsanctioned list
+              if grep -qiF "$location" unsanctioned.txt; then
+                  status="🚫 Unsanctioned"
+                  echo "⚠️ Warning: $location is an unsanctioned GEO location!"
+              else
+                  status="✅ Allowed"
+              fi
+              
+              echo "| $location | $count | $status |" >> provenance_summary.md
           done < provenance_summary.txt
           
           echo "" >> provenance_summary.md
-          echo "## ✅ Key Takeaways:" >> provenance_summary.md
-          echo "- The package has a global contributor base, showcasing open-source diversity." >> provenance_summary.md
-          echo "- Strong representation from tech hubs like California, Berlin, Melbourne, and Hyderabad." >> provenance_summary.md
-          echo "- The curated data emphasizes the United States, likely indicating primary maintainership or organizational presence." >> provenance_summary.md
+          echo "---" >> provenance_summary.md
+          echo "## ✅ **Key Takeaways:**" >> provenance_summary.md
+          echo "> - 🌐 **Global Reach:** The package has a contributor base from multiple countries, showcasing open-source diversity." >> provenance_summary.md
+          echo "> - 🚀 **Tech Hubs:** Strong representation from tech hubs like **California**, **Berlin**, **Melbourne**, and **Hyderabad**." >> provenance_summary.md
+          echo "> - 🚫 **Warning:** Code contributions from **unsanctioned GEO locations** detected!" >> provenance_summary.md
           
-          echo "✅ Provenance Summary generated successfully."
+          echo "" >> provenance_summary.md
+          echo "## 📂 **Raw Provenance Data:**" >> provenance_summary.md
+          echo "\`\`\`json" >> provenance_summary.md
+          cat provenance_results.json >> provenance_summary.md
+          echo "\`\`\`" >> provenance_summary.md
+          
+          echo "✅ Provenance Summary with unsanctioned GEO check generated successfully."
 
       - name: Display GitHub Summary
         run: cat provenance_summary.md >> $GITHUB_STEP_SUMMARY
@@ -73,3 +117,4 @@ jobs:
             provenance_results.json
             provenance_summary.txt
             provenance_summary.md
+            unsanctioned.txt
