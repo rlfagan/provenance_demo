@@ -3,7 +3,7 @@ name: SCANOSS Provenance Summary
 on:
   push:
     branches:
-      - main
+      - '*'  # Run on any branch push
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -21,6 +21,7 @@ jobs:
 
       - name: Run SCANOSS Provenance Lookup
         run: |
+          echo "🚀 Running SCANOSS Provenance API Request..."
           curl --location 'https://api.scanoss.com/api/v2/provenance/countries' \
           --header 'Content-Type: application/json' \
           --header 'X-Api-Key: txnUfW0xwF0KI1U1RW5sDSBL' \
@@ -31,9 +32,11 @@ jobs:
               }
           ]
           }' > provenance_results.json
+          echo "✅ SCANOSS API request completed. Results saved to provenance_results.json"
 
       - name: Generate Provenance Summary
         run: |
+          echo "📊 Generating Provenance Summary..."
           python3 -c '
 import json
 import pandas as pd
@@ -42,7 +45,7 @@ import pandas as pd
 with open("provenance_results.json", "r") as f:
     data = json.load(f)
 
-# Safely extract declared locations
+# Extract declared locations
 locations = [loc.get("location", "Unknown") for loc in data.get("purls", [{}])[0].get("declaredLocations", [])]
 
 # Create a frequency table of locations
@@ -54,32 +57,17 @@ summary.columns = ["Location", "Count"]
 summary.to_csv("provenance_summary.csv", index=False)
 
 # Generate a detailed markdown summary for GitHub Actions Job Summary
-markdown_summary = """
+markdown_summary = f"""
 # 📄 Provenance Summary for pkg:github/heimdal/heimdal
 
 ## 🌍 Geographic Distribution of Contributors:
 
-| **Region**        | **Locations**                                           | **Examples**                              |
-|-------------------|---------------------------------------------------------|------------------------------------------|
-| **United States** | California, Florida, Massachusetts, Texas, New York, Ohio, etc. | Irvine, Sunnyvale, Cambridge, San Mateo   |
-| **Europe**        | Germany, France, UK, Czech Republic, Sweden, Austria    | Berlin, Lyon, Stockholm, Brno, Linz       |
-| **Asia**          | India, Japan, Singapore, Taiwan                         | Hyderabad, Bangalore, Tokyo, Taipei       |
-| **Australia**     | Melbourne (multiple occurrences)                        | Melbourne                                |
-| **Canada**        | Ontario                                                 | Waterloo                                 |
-| **Other**         | New Zealand, Spain, Gondwanaland, “The world”           | Wellington, Murcia, Eifel-Ardennen        |
+| **Location**            | **Count** |
+|--------------------------|-----------|
+{summary.head(10).to_string(index=False, header=False, col_space=10)}
 
-## 📊 Top 5 Most Frequent Locations:
-1. **United States:** Multiple states including California and Massachusetts.
-2. **Germany:** Berlin, Goettingen, Stuttgart.
-3. **Australia:** Melbourne.
-4. **France:** Paris, Lyon, Bordeaux.
-5. **India:** Hyderabad, Bangalore.
-
-## ✅ Curated Provenance:
-- **United States:** 1 curated entry.
-
-## 🎯 Key Takeaways:
-- The package has a highly global contributor base, showcasing open-source diversity.
+## ✅ Key Takeaways:
+- The package has a global contributor base, showcasing open-source diversity.
 - Strong representation from tech hubs like California, Berlin, Melbourne, and Hyderabad.
 - The curated data emphasizes the United States, likely indicating primary maintainership or organizational presence.
 """
@@ -87,13 +75,15 @@ markdown_summary = """
 # Write the markdown to a file
 with open("provenance_summary.md", "w") as f:
     f.write(markdown_summary)
+
+print("✅ Provenance Summary generated successfully.")
 '
 
       - name: Display GitHub Summary
         run: cat provenance_summary.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: provenance_assets
           path: |
