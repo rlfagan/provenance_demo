@@ -16,8 +16,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq python3 python3-pip
-          pip install pandas
+          sudo apt-get install -y jq
 
       - name: Run SCANOSS Provenance Lookup
         run: |
@@ -34,50 +33,34 @@ jobs:
           }' > provenance_results.json
           echo "✅ SCANOSS API request completed. Results saved to provenance_results.json"
 
-      - name: Generate Provenance Summary
+      - name: Generate Provenance Summary Using jq and awk
         run: |
-          echo "📊 Generating Provenance Summary..."
-          python3 -c '
-import json
-import pandas as pd
-
-# Load the provenance results
-with open("provenance_results.json", "r") as f:
-    data = json.load(f)
-
-# Extract declared locations
-locations = [loc.get("location", "Unknown") for loc in data.get("purls", [{}])[0].get("declaredLocations", [])]
-
-# Create a frequency table of locations
-location_df = pd.DataFrame(locations, columns=["Location"])
-summary = location_df["Location"].value_counts().reset_index()
-summary.columns = ["Location", "Count"]
-
-# Save the summary to a CSV file
-summary.to_csv("provenance_summary.csv", index=False)
-
-# Generate a detailed markdown summary for GitHub Actions Job Summary
-markdown_summary = f"""
-# 📄 Provenance Summary for pkg:github/heimdal/heimdal
-
-## 🌍 Geographic Distribution of Contributors:
-
-| **Location**            | **Count** |
-|--------------------------|-----------|
-{summary.head(10).to_string(index=False, header=False, col_space=10)}
-
-## ✅ Key Takeaways:
-- The package has a global contributor base, showcasing open-source diversity.
-- Strong representation from tech hubs like California, Berlin, Melbourne, and Hyderabad.
-- The curated data emphasizes the United States, likely indicating primary maintainership or organizational presence.
-"""
-
-# Write the markdown to a file
-with open("provenance_summary.md", "w") as f:
-    f.write(markdown_summary)
-
-print("✅ Provenance Summary generated successfully.")
-'
+          echo "📊 Extracting and Summarizing Provenance Data..."
+          
+          # Extract declared locations and count frequencies using jq and awk
+          jq -r '.purls[0].declaredLocations[].location' provenance_results.json | sort | uniq -c | sort -nr > provenance_summary.txt
+          
+          # Generate a Markdown summary for GitHub Actions Job Summary
+          echo "# 📄 Provenance Summary for pkg:github/heimdal/heimdal" > provenance_summary.md
+          echo "" >> provenance_summary.md
+          echo "## 🌍 Geographic Distribution of Contributors:" >> provenance_summary.md
+          echo "" >> provenance_summary.md
+          echo "| **Location** | **Count** |" >> provenance_summary.md
+          echo "|--------------|------------|" >> provenance_summary.md
+          
+          while read -r line; do
+              count=$(echo "$line" | awk '{print $1}')
+              location=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
+              echo "| $location | $count |" >> provenance_summary.md
+          done < provenance_summary.txt
+          
+          echo "" >> provenance_summary.md
+          echo "## ✅ Key Takeaways:" >> provenance_summary.md
+          echo "- The package has a global contributor base, showcasing open-source diversity." >> provenance_summary.md
+          echo "- Strong representation from tech hubs like California, Berlin, Melbourne, and Hyderabad." >> provenance_summary.md
+          echo "- The curated data emphasizes the United States, likely indicating primary maintainership or organizational presence." >> provenance_summary.md
+          
+          echo "✅ Provenance Summary generated successfully."
 
       - name: Display GitHub Summary
         run: cat provenance_summary.md >> $GITHUB_STEP_SUMMARY
@@ -88,5 +71,5 @@ print("✅ Provenance Summary generated successfully.")
           name: provenance_assets
           path: |
             provenance_results.json
-            provenance_summary.csv
+            provenance_summary.txt
             provenance_summary.md
