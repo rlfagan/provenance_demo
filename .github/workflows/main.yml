@@ -13,37 +13,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Verify Unsanctioned GEO List
+        run: |
+          echo "📂 Checking for unsanctioned.txt file in the repository..."
+          if [ ! -f unsanctioned.txt ]; then
+            echo "❌ Error: unsanctioned.txt not found in the repository!"
+            exit 1
+          else
+            echo "✅ Found unsanctioned.txt. Displaying contents:"
+            cat unsanctioned.txt
+          fi
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
-
-      - name: Create Unsanctioned GEO Location List
-        run: |
-          echo "🚧 Creating unsanctioned.txt with GEO locations on the U.S. watchlist..."
-          cat > unsanctioned.txt << EOL
-Iran
-North Korea
-Cuba
-Syria
-Russia
-Belarus
-China
-Myanmar
-Venezuela
-Iraq
-Lebanon
-Libya
-Sudan
-Zimbabwe
-Afghanistan
-Yemen
-Somalia
-Eritrea
-Pakistan
-Kazakhstan
-EOL
-          echo "✅ Unsanctioned GEO location list created."
 
       - name: Run SCANOSS Provenance Lookup
         run: |
