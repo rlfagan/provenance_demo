@@ -34,27 +34,27 @@ jobs:
 
       - name: Generate Provenance Summary
         run: |
-          python3 -c "
+          python3 -c '
 import json
 import pandas as pd
 
 # Load the provenance results
-with open('provenance_results.json', 'r') as f:
+with open("provenance_results.json", "r") as f:
     data = json.load(f)
 
-# Extract declared locations
-locations = [loc['location'] for loc in data['purls'][0]['declaredLocations']]
+# Safely extract declared locations
+locations = [loc.get("location", "Unknown") for loc in data.get("purls", [{}])[0].get("declaredLocations", [])]
 
 # Create a frequency table of locations
-location_df = pd.DataFrame(locations, columns=['Location'])
-summary = location_df['Location'].value_counts().reset_index()
-summary.columns = ['Location', 'Count']
+location_df = pd.DataFrame(locations, columns=["Location"])
+summary = location_df["Location"].value_counts().reset_index()
+summary.columns = ["Location", "Count"]
 
 # Save the summary to a CSV file
-summary.to_csv('provenance_summary.csv', index=False)
+summary.to_csv("provenance_summary.csv", index=False)
 
 # Generate a detailed markdown summary for GitHub Actions Job Summary
-markdown_summary = '''
+markdown_summary = """
 # 📄 Provenance Summary for pkg:github/heimdal/heimdal
 
 ## 🌍 Geographic Distribution of Contributors:
@@ -82,12 +82,12 @@ markdown_summary = '''
 - The package has a highly global contributor base, showcasing open-source diversity.
 - Strong representation from tech hubs like California, Berlin, Melbourne, and Hyderabad.
 - The curated data emphasizes the United States, likely indicating primary maintainership or organizational presence.
-'''
+"""
 
 # Write the markdown to a file
-with open('provenance_summary.md', 'w') as f:
+with open("provenance_summary.md", "w") as f:
     f.write(markdown_summary)
-"
+'
 
       - name: Display GitHub Summary
         run: cat provenance_summary.md >> $GITHUB_STEP_SUMMARY
