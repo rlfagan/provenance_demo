@@ -1,4 +1,4 @@
-# 🚦 SCANOSS Provenance Summary GitHub Action
+# 🚦 SCANOSS Provenance Demo
 
 This repository contains a **GitHub Actions** workflow that automates the **provenance analysis** of open-source software components using the **SCANOSS API**. The workflow generates a detailed **report** of **geographic contributions** to the codebase, highlighting contributions from **unsanctioned GEO locations** based on a configurable **watchlist**.
 
