@@ -43,7 +43,7 @@ This repository contains a **GitHub Actions** workflow that automates the **prov
 | Moscow, Russia       | 2            | 🚫 Unsanctioned |
 | Tehran, Iran         | 1            | 🚫 Unsanctioned |
 | Berlin, Germany      | 1            | ✅ Allowed    |
-| Beijing, China       | 1            | 🚫 Unsanctioned |
+| Beijing, China       | 1            | ✅ Allowed    |
 | New York, NY         | 1            | ✅ Allowed    |
 
 ---
