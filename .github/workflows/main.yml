@@ -1,4 +1,4 @@
-name: SCANOSS Provenance Summary
+name: SCANOSS Provenance Summary.
 
 on:
   push:
